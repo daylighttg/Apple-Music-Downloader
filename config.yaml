@@ -32,7 +32,7 @@ alac-max: 192000  #192000 96000 48000 44100
 atmos-max: 2768  #2768 2448
 #################################
 # 绝对路径字符限制：不填就自动检测运行系统 windows=200 linux/mac=4096
-max-path-length: 200
+max-path-length: 255
 #################################
 limit-max: 100
 #{AlbumId} {AlbumName} {ArtistName} {ReleaseDate} {ReleaseYear} {UPC} {Copyright} {Quality} {Codec} {Tag} {RecordLabel}
