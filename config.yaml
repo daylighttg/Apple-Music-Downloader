@@ -4,7 +4,7 @@
 # 下载单曲时，程序将根据链接的区域 (如 /cn/, /us/) 自动匹配拥有相同 "storefront" 值的账号。
 # ----------------------------------------------------------------
 accounts:
-  - name: "CN" # 账号别名称方便识别
+  - name: "CN" # 账号别名，方便识别
     storefront: "cn"     # 账号所属区域 (必须小写, 如 cn, us, jp, hk)
     media-user-token: "" #在此处填入CN区账号的media-user-token
     # authorization-token: "your-cn-auth-token" # 可选，如果留空或为 "your-authorization-token"，程序会自动获取
