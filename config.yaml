@@ -52,6 +52,9 @@ chunk_downloadthreads: 30       #
 aac_downloadthreads: 20         #
 lossless_downloadthreads: 20    #
 hires_downloadthreads: 20       #
+#专辑文件夹路径总字符数,留空自动就检测#
+#windows默认255，mac/Linux 4096  #
+MaxPathLength: 255              #
 #################################
 max-memory-limit: 256 # 单位 MB
 # M3U8 获取模式
