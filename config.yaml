@@ -6,21 +6,21 @@
 accounts:
   - name: "CN" # 账号别名，方便识别
     storefront: "cn"     # 账号所属区域 (必须小写, 如 cn, us, jp, hk)
-    media-user-token: "" #在此处填入CN区账号的media-user-token
+    media-user-token: "" #在此处填入CN区账号的 media-user-token
     # authorization-token: "your-cn-auth-token" # 可选，如果留空或为 "your-authorization-token"，程序会自动获取
     decrypt-m3u8-port: "127.0.0.1:10020" # 此账号对应的解密服务端口
     get-m3u8-port: "127.0.0.1:10021"     # 此账号对应的M3U8获取服务端口
 # ----------------------------------------------------------------
   - name: "US"
     storefront: "us"
-    media-user-token: "" #在此处填入US区账号的media-user-token
+    media-user-token: "" #在此处填入US区账号的 media-user-token
     # authorization-token: "your-us-auth-token"
     decrypt-m3u8-port: "127.0.0.1:20020"
     get-m3u8-port: "127.0.0.1:20021"
 # ----------------------------------------------------------------
   # - name: "JP"
   #   storefront: "jp"
-  #   media-user-token: "在此处填入JP区账号的media-user-token"
+  #   media-user-token: "在此处填入JP区账号的 media-user-token"
   #   authorization-token: "your-us-auth-token"
   #   decrypt-m3u8-port: "127.0.0.1:30020"
   #   get-m3u8-port: "127.0.0.1:30021"
@@ -45,17 +45,17 @@ emby-animated-artwork: false # 需要 ffmpeg
 # 下载保存路径设置
 alac-save-folder: "/home/music"
 atmos-save-folder: "/home/music"
-#################################
-# m3u8切片数量。                  #
-chunk_downloadthreads: 30       #
-# 下载线程数，最低为 1             #
-aac_downloadthreads: 20         #
-lossless_downloadthreads: 20    #
-hires_downloadthreads: 20       #
-#专辑文件夹路径总字符数,留空自动就检测#
-#windows默认255，mac/Linux 4096  #
-MaxPathLength: 255              #
-#################################
+###################################
+# m3u8切片数量。                    #
+chunk_downloadthreads: 30         #
+# 下载线程数，最低为 1               #
+aac_downloadthreads: 20           #
+lossless_downloadthreads: 20      #
+hires_downloadthreads: 20         #
+#专辑文件夹路径总字符数,留空自动就检测  #
+#windows默认255，mac/Linux 4096    #
+MaxPathLength: 255                #
+###################################
 max-memory-limit: 256 # 单位 MB
 # M3U8 获取模式
 get-m3u8-from-device: true
