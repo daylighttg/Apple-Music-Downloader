@@ -41,6 +41,11 @@ lossless_downloadthreads: 30    #
 hires_downloadthreads: 30       #
 #################################
 #max-memory-limit: 256 # 单位 MB，已丢弃
+# ---------------------------------------------------------------- 
+ffmpeg-fix: true   #是否开启下载完成ffmpeg检测
+ffmpeg-check-args: "-v error -f null -"    #ffmpeg检测参数
+ffmpeg-encode-args: "-map 0:a -c:a alac -f mp4"     #重编码参数
+# ----------------------------------------------------------------  
   
 language: "" # 语言代码, 例如 "zh-CN", "en-US". 留空则自动检测.
              # 各区域支持的语言列表: https://gist.github.com/itouakirai/c8ba9df9dc65bd300094103b058731d0
