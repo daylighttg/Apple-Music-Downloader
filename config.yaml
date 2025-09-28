@@ -29,6 +29,7 @@ accounts:
 alac-save-folder: "/home/music"
 atmos-save-folder: "/home/music"
 #################################
+#经常下载失败请按自身网络环境调整参数 #
 # m3u8切片数量。                  #
 chunk_downloadthreads: 30       #
 # 网络块大小                      #
@@ -40,11 +41,13 @@ aac_downloadthreads: 30         #
 lossless_downloadthreads: 30    #
 hires_downloadthreads: 30       #
 #################################
-#max-memory-limit: 256 # 单位 MB，已丢弃
 # ---------------------------------------------------------------- 
-ffmpeg-fix: true   #是否开启下载完成ffmpeg检测
-ffmpeg-check-args: "-v error -f null -"    #ffmpeg检测参数
-ffmpeg-encode-args: "-map 0:a -map 0:v -c:a alac -c:v copy -f mp4"     #重编码参数
+#是否开启下载完成ffmpeg检测，并重新编码
+ffmpeg-fix: false
+#ffmpeg检测参数，可自行调整
+ffmpeg-check-args: "-v error -f null -"
+#ffmpeg重编码参数，可自行调整
+ffmpeg-encode-args: "-map 0:a -map 0:v -c:a alac -c:v copy -f mp4"
 # ----------------------------------------------------------------  
   
 language: "" # 语言代码, 例如 "zh-CN", "en-US". 留空则自动检测.
