@@ -42,6 +42,9 @@ lossless_downloadthreads: 30    #
 hires_downloadthreads: 30       #
 #################################
 # ---------------------------------------------------------------- 
+# 从txt文件下载时，同时进行1个任务，过多任务有可能导致下载不稳定
+txtDownloadThreads: 1
+# ----------------------------------------------------------------  
 #是否开启下载完成ffmpeg检测，并重新编码
 ffmpeg-fix: false
 #ffmpeg检测参数，可自行调整
@@ -49,11 +52,11 @@ ffmpeg-check-args: "-v error -f null -"
 #ffmpeg重编码参数，可自行调整
 ffmpeg-encode-args: "-map 0:a -map 0:v -c:a alac -c:v copy -f mp4"
 # ----------------------------------------------------------------  
-  
-language: "" # 语言代码, 例如 "zh-CN", "en-US". 留空则自动检测.
-             # 各区域支持的语言列表: https://gist.github.com/itouakirai/c8ba9df9dc65bd300094103b058731d0
-# 歌词设置
+# 语言代码, 例如 "zh-CN", "en-US". 留空则自动检测
+# 各区域支持的语言列表: https://gist.github.com/itouakirai/c8ba9df9dc65bd300094103b058731d0
+language: "" 
 # ---------------------------------------------------------------- 
+# 歌词设置
 # 自动识别链接的区域并使用此区域的账号获取歌词
 # 当发起任务的链接区域不在账号列表时,可选账号列表下的区域为默认下载歌词区域
 default-lyric-storefront: "cn"
