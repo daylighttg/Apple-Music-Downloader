@@ -3,24 +3,38 @@
 # 在此列表中配置您的所有账号。下载专辑时，程序将从此列表中轮流选取账号进行并行解密。
 # 下载单曲时，程序将根据链接的区域 (如 /cn/, /us/) 自动匹配拥有相同 "storefront" 值的账号。
 # ----------------------------------------------------------------
+# 
+# 📝 使用说明：
+# 1. 复制此文件为 config.yaml
+# 2. 将 "your-media-user-token" 替换为你的真实 token
+# 3. 根据需要配置各项参数
+# 4. config.yaml 不会被提交到 Git（已在 .gitignore 中）
+# 
+# 🔐 如何获取 media-user-token：
+# 1. 打开 Apple Music 网页版并登录
+# 2. 打开开发者工具 (F12)
+# 3. 进入 Application -> Cookies -> https://music.apple.com
+# 4. 找到名为 "media-user-token" 的 cookie，复制其值
+#
+# ----------------------------------------------------------------
 accounts:
   - name: "CN"           # 账号名称，方便识别
     storefront: "cn"     # 账号所属区域 (必须小写, 如 cn, us, jp, hk)
-    media-user-token: "AsvZC1IqvgLKU+RQICaMzwA8FOgi/uWem8nQo0fq6vGSw6twWl3kZYEajPfE5G5ufW3nfNFseXGusBjteulmSX19/b1b5cIoTD7vi2CcqZTKCD+ZmS4pMKD475ITblVPo4aM5Zrh6coNjZJQtd/kCpoALe7/VJnxqI2+0EF2NDMeAcYZFIS3y1WKKyDYMf++eVRJL07TEXrm0TCT+PkZSmSy+wfj+wWb0o0cvkveL6+xn8wd1A=="
-    authorization-token: "your-cn-auth-token" # 可选，如果留空或为 "your-authorization-token"，程序会自动获取
-    decrypt-m3u8-port: "192.168.1.9:10020" # 此账号对应的解密服务端口
-    get-m3u8-port: "192.168.1.9:10021"     # 此账号对应的M3U8获取服务端口
+    media-user-token: "your-media-user-token-here"  # 替换为你的真实 token
+    authorization-token: "your-authorization-token" # 可选，如果留空，程序会自动获取
+    decrypt-m3u8-port: "127.0.0.1:10020" # 此账号对应的解密服务端口
+    get-m3u8-port: "127.0.0.1:10021"     # 此账号对应的M3U8获取服务端口
 # ----------------------------------------------------------------
   # - name: "US"
   #   storefront: "us"
-  #   media-user-token: "your-media-user-token"
+  #   media-user-token: "your-media-user-token-here"
   #   authorization-token: "your-us-auth-token"
   #   decrypt-m3u8-port: "127.0.0.1:20020"
   #   get-m3u8-port: "127.0.0.1:20021"
 # ----------------------------------------------------------------
   # - name: "JP"
   #   storefront: "jp"
-  #   media-user-token: "your-media-user-token"
+  #   media-user-token: "your-media-user-token-here"
   #   authorization-token: "your-us-auth-token"
   #   decrypt-m3u8-port: "127.0.0.1:30020"
   #   get-m3u8-port: "127.0.0.1:30021"
@@ -33,7 +47,7 @@ mv-save-folder: "/media/Music/AppleMusic/MusicVideos"
 # 缓存中转机制设置
 # 启用后，将先下载到本地缓存文件夹，完成所有处理后再移动到目标路径
 # 适用于通过NFS等网络文件系统访问的远程路径，可显著提升效率和稳定性
-enable-cache: true              # 是否启用缓存机制 (true/false)
+enable-cache: false             # 是否启用缓存机制 (true/false)
 cache-folder: "./Cache"         # 缓存文件夹路径，相对路径或绝对路径
 
 #################################
