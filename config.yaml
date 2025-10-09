@@ -6,7 +6,7 @@
 accounts:
   - name: "CN"           # 账号名称，方便识别
     storefront: "cn"     # 账号所属区域 (必须小写, 如 cn, us, jp, hk)
-    media-user-token: "AsvZC1IqvgLKU+RQICaMzwA8FOgi/uWem8nQo0fq6vGSw6twWl3kZYEajPfE5G5ufW3nfNFseXGusBjteulmSX19/b1b5cIoTD7vi2CcqZTKCD+ZmS4pMKD475ITblVPo4aM5Zrh6coNjZJQtd/kCpoALe7/VJnxqI2+0EF2NDMeAcYZFIS3y1WKKyDYMf++eVRJL07TEXrm0TCT+PkZSmSy+wfj+wWb0o0cvkveL6+xn8wd1A=="
+    media-user-token: "Ahcx9Glaq2AWej2/mF/wSbroLVp7AwK/yLqqlC4X3XZLssoTQ9DStgtyXASuL4T0GyD6oSQHuoZtRZbYAywPEldxXpds9/nsPDDieY7EglPy5y7GNtTEE04QebDoWQhl6ytccpsZNkCU8pd57/hKYuVxMgsdUxUTVjbqIr1bAbxWHqadwW34GENVwWD1f90jfqd+qRQsEi4W80VC9NYtfNcfd7usI+xiXiMEJs13jyyx8j/khw=="
     authorization-token: "your-cn-auth-token" # 可选，如果留空或为 "your-authorization-token"，程序会自动获取
     decrypt-m3u8-port: "192.168.1.9:10020" # 此账号对应的解密服务端口
     get-m3u8-port: "192.168.1.9:10021"     # 此账号对应的M3U8获取服务端口
