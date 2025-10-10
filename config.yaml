@@ -89,7 +89,7 @@ mv_downloadthreads: 3             # MV 视频文件并行下载线程数
 ffmpeg-fix: true                  # 是否在下载完成后检测编码问题 (推荐开启)
 ffmpeg-check-args: "-map 0:a:0 -f wav -hide_banner -loglevel error -"  # 检测参数
 ffmpeg-encode-args: "-c:v copy -c:a alac -avoid_negative_ts make_zero -f mp4 -y"  # 重编码参数
-
+skip-existing-validation: false
 
 # ================================================================
 # 6. 语言与区域配置 (Language & Region Configuration)
