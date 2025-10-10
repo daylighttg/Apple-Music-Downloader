@@ -10,13 +10,23 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"main/internal/api"
 	"main/internal/core"
 	"main/internal/downloader"
+	"main/internal/history"
 	"main/internal/parser"
 
+	"github.com/fatih/color"
 	"github.com/spf13/pflag"
+)
+
+// 版本信息（编译时通过 ldflags 注入）
+var (
+	Version   = "dev"     // 版本号
+	BuildTime = "unknown" // 编译时间
+	GitCommit = "unknown" // Git提交哈希
 )
 
 func handleSingleMV(urlRaw string) {
@@ -139,7 +149,7 @@ func handleSingleMV(urlRaw string) {
 	core.SharedLock.Unlock()
 }
 
-func processURL(urlRaw string, wg *sync.WaitGroup, semaphore chan struct{}, currentTask int, totalTasks int) {
+func processURL(urlRaw string, wg *sync.WaitGroup, semaphore chan struct{}, currentTask int, totalTasks int) (string, string, error) {
 	if wg != nil {
 		defer wg.Done()
 	}
@@ -152,10 +162,12 @@ func processURL(urlRaw string, wg *sync.WaitGroup, semaphore chan struct{}, curr
 	}
 
 	var storefront, albumId string
+	var albumName string
+	_ = albumName // 用于历史记录
 
 	if strings.Contains(urlRaw, "/music-video/") {
 		handleSingleMV(urlRaw)
-		return
+		return "", "", nil
 	}
 
 	if strings.Contains(urlRaw, "/song/") {
@@ -163,12 +175,12 @@ func processURL(urlRaw string, wg *sync.WaitGroup, semaphore chan struct{}, curr
 		accountForSong, err := core.GetAccountForStorefront(tempStorefront)
 		if err != nil {
 			fmt.Printf("获取歌曲信息失败 for %s: %v\n", urlRaw, err)
-			return
+			return "", "", err
 		}
 		urlRaw, err = api.GetUrlSong(urlRaw, accountForSong)
 		if err != nil {
 			fmt.Printf("获取歌曲链接失败 for %s: %v\n", urlRaw, err)
-			return
+			return "", "", err
 		}
 		core.Dl_song = true
 	}
@@ -180,28 +192,73 @@ func processURL(urlRaw string, wg *sync.WaitGroup, semaphore chan struct{}, curr
 	}
 
 	if albumId == "" {
+		err := fmt.Errorf("无效的URL")
 		fmt.Printf("无效的URL: %s\n", urlRaw)
-		return
+		return "", "", err
+	}
+
+	// 获取专辑信息用于历史记录
+	mainAccount, err := core.GetAccountForStorefront(storefront)
+	if err == nil {
+		meta, err := api.GetMeta(albumId, mainAccount, storefront)
+		if err == nil && len(meta.Data) > 0 {
+			albumName = meta.Data[0].Attributes.Name
+		}
 	}
 
 	parse, err := url.Parse(urlRaw)
 	if err != nil {
 		log.Printf("解析URL失败 %s: %v", urlRaw, err)
-		return
+		return albumId, albumName, err
 	}
 	var urlArg_i = parse.Query().Get("i")
 	err = downloader.Rip(albumId, storefront, urlArg_i, urlRaw)
 	if err != nil {
 		core.SafePrintf("专辑下载失败: %s -> %v\n", urlRaw, err)
+		return albumId, albumName, err
 	} else {
 		if totalTasks > 1 {
 			core.SafePrintf("✅ [%d/%d] 任务完成: %s\n", currentTask, totalTasks, urlRaw)
 		}
+		return albumId, albumName, nil
 	}
 }
 
-func runDownloads(initialUrls []string, isBatch bool) {
+// parseTxtFile 从TXT文件中解析URL列表
+func parseTxtFile(filePath string) ([]string, error) {
+	fileBytes, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("读取文件失败: %v", err)
+	}
+
+	lines := strings.Split(string(fileBytes), "\n")
+	var urls []string
+	for _, line := range lines {
+		trimmedLine := strings.TrimSpace(line)
+		// 跳过空行和注释行（以#开头）
+		if trimmedLine == "" || strings.HasPrefix(trimmedLine, "#") {
+			continue
+		}
+		// 支持一行多个链接（空格分隔）
+		linksInLine := strings.Fields(trimmedLine)
+		for _, link := range linksInLine {
+			link = strings.TrimSpace(link)
+			if link != "" {
+				urls = append(urls, link)
+			}
+		}
+	}
+	return urls, nil
+}
+
+func runDownloads(initialUrls []string, isBatch bool, taskFile string) {
 	var finalUrls []string
+
+	// 显示输入链接统计
+	if isBatch && len(initialUrls) > 0 {
+		core.SafePrintf("📋 初始链接总数: %d\n", len(initialUrls))
+		core.SafePrintf("🔄 开始预处理链接...\n\n")
+	}
 
 	for _, urlRaw := range initialUrls {
 		if strings.Contains(urlRaw, "/artist/") {
@@ -243,32 +300,285 @@ func runDownloads(initialUrls []string, isBatch bool) {
 		return
 	}
 
-	numThreads := 1
-	if isBatch && core.Config.TxtDownloadThreads > 1 {
-		numThreads = core.Config.TxtDownloadThreads
-	}
-
-	var wg sync.WaitGroup
-	semaphore := make(chan struct{}, numThreads)
 	totalTasks := len(finalUrls)
-
-	core.SafePrintf("📋 开始下载任务\n📝 总数: %d, 并发数: %d\n--------------------\n", totalTasks, numThreads)
-
-	for i, urlToProcess := range finalUrls {
-		wg.Add(1)
-		semaphore <- struct{}{}
-		go processURL(urlToProcess, &wg, semaphore, i+1, totalTasks)
+	
+	// 处理 --start 参数
+	startIndex := 0  // 实际数组索引（从0开始）
+	if core.StartFrom > 0 {
+		if core.StartFrom > totalTasks {
+			core.SafePrintf("⚠️  起始位置 %d 超过了总任务数 %d，将从第 1 个开始\n", core.StartFrom, totalTasks)
+			core.StartFrom = 1
+		} else {
+			startIndex = core.StartFrom - 1  // 用户输入从1开始，转换为0开始的索引
+			skippedCount := startIndex
+			core.SafePrintf("⏭️  跳过前 %d 个任务，从第 %d 个开始下载\n", skippedCount, core.StartFrom)
+			finalUrls = finalUrls[startIndex:]  // 跳过前面的链接
+			totalTasks = len(finalUrls)          // 更新剩余任务数
+		}
 	}
 
-	wg.Wait()
+	// 初始化历史记录系统
+	var task *history.TaskHistory
+	if isBatch && taskFile != "" {
+		// 初始化历史记录目录
+		if err := history.InitHistory(); err != nil {
+			core.SafePrintf("⚠️  初始化历史记录失败: %v\n", err)
+		}
+
+		// 检查历史记录，获取已完成的记录（包含音质信息）
+		var err error
+		completedRecords, err := history.GetCompletedRecords(taskFile)
+		if err != nil {
+			core.SafePrintf("⚠️  读取历史记录失败: %v\n", err)
+			completedRecords = make(map[string]*history.DownloadRecord)
+		}
+
+		// 获取当前音质哈希
+		currentQualityHash := history.GetQualityHash(
+			core.Config.GetM3u8Mode,
+			core.Config.AacType,
+			core.Config.AlacMax,
+			core.Config.AtmosMax,
+		)
+
+		// 过滤已完成的URL（支持音质参数对比）
+		skippedCount := 0
+		qualityChangedCount := 0
+		var remainingUrls []string
+
+		for _, url := range finalUrls {
+			if oldRecord, exists := completedRecords[url]; exists {
+				// URL在历史记录中存在
+
+				if oldRecord.QualityHash == "" {
+					// 旧版本历史记录（无音质哈希），默认跳过
+					skippedCount++
+				} else if oldRecord.QualityHash == currentQualityHash {
+					// 音质参数相同，跳过
+					skippedCount++
+				} else {
+					// 音质参数不同，标记为需要重新下载
+					qualityChangedCount++
+					remainingUrls = append(remainingUrls, url)
+				}
+			} else {
+				// 新链接
+				remainingUrls = append(remainingUrls, url)
+			}
+		}
+
+		if skippedCount > 0 || qualityChangedCount > 0 {
+			core.SafePrintf("📜 历史记录检测: 发现 %d 个已完成的任务\n", skippedCount+qualityChangedCount)
+			if qualityChangedCount > 0 {
+				core.SafePrintf("🔄 音质变化检测: 发现 %d 个任务音质已变化，将重新下载\n", qualityChangedCount)
+				core.SafePrintf("   旧音质配置 → 新音质配置:\n")
+
+				// 显示第一个音质变化的详细信息作为示例
+				for _, url := range finalUrls {
+					if oldRecord, exists := completedRecords[url]; exists && oldRecord.QualityHash != "" && oldRecord.QualityHash != currentQualityHash {
+						core.SafePrintf("   - alac-max: %d → %d\n", oldRecord.AlacMax, core.Config.AlacMax)
+						core.SafePrintf("   - atmos-max: %d → %d\n", oldRecord.AtmosMax, core.Config.AtmosMax)
+						core.SafePrintf("   - get-m3u8-mode: %s → %s\n", oldRecord.GetM3u8Mode, core.Config.GetM3u8Mode)
+						core.SafePrintf("   - aac-type: %s → %s\n", oldRecord.AacType, core.Config.AacType)
+						break
+					}
+				}
+			}
+			core.SafePrintf("⏭️  已自动跳过 %d 个，剩余 %d 个任务\n\n", skippedCount, len(remainingUrls))
+
+			finalUrls = remainingUrls
+			totalTasks = len(finalUrls)
+
+			if totalTasks == 0 {
+				core.SafePrintf("✅ 所有任务都已完成，无需重复下载！\n")
+				return
+			}
+		}
+
+		// 创建新任务
+		task, err = history.NewTask(taskFile, totalTasks)
+		if err != nil {
+			core.SafePrintf("⚠️  创建任务记录失败: %v\n", err)
+		}
+	}
+
+	// 保存原始总数用于显示
+	originalTotalTasks := len(initialUrls)
+	
+	if isBatch {
+		core.SafePrintf("\n📋 ========== 开始下载任务 ==========\n")
+		if len(initialUrls) != totalTasks {
+			core.SafePrintf("📝 预处理完成: %d 个链接 → %d 个任务\n", len(initialUrls), originalTotalTasks)
+		} else {
+			core.SafePrintf("📝 任务总数: %d\n", originalTotalTasks)
+		}
+		if core.StartFrom > 0 {
+			core.SafePrintf("📝 实际下载: 第 %d 至第 %d 个（共 %d 个）\n", core.StartFrom, originalTotalTasks, totalTasks)
+		}
+		core.SafePrintf("⚡ 执行模式: 串行模式 \n")
+		core.SafePrintf("📦 专辑内并发: 由配置文件控制\n")
+		if task != nil {
+			core.SafePrintf("📜 历史记录: 已启用\n")
+		}
+		core.SafePrintf("====================================\n\n")
+	} else {
+		core.SafePrintf("📋 开始下载任务\n📝 总数: %d\n--------------------\n", originalTotalTasks)
+	}
+
+	// 批量模式：串行执行（按链接顺序依次下载）
+	// 专辑内歌曲并发数由配置文件控制 (lossless_downloadthreads 等)
+	
+	// 工作-休息循环机制
+	var workStartTime time.Time
+	if isBatch && core.Config.WorkRestEnabled {
+		workStartTime = time.Now()
+		core.SafePrintf("⏰ 工作-休息循环已启用: 工作 %d 分钟，休息 %d 分钟\n", 
+			core.Config.WorkDurationMinutes, 
+			core.Config.RestDurationMinutes)
+		core.SafePrintf("⏱️  工作开始时间: %s\n\n", workStartTime.Format("15:04:05"))
+	}
+	
+	for i, urlToProcess := range finalUrls {
+		// 计算实际的任务编号（考虑 --start 参数）
+		actualTaskNum := i + 1 + startIndex  // 实际编号 = 当前索引 + 1 + 跳过的数量
+		originalTotalTasks := len(initialUrls) // 原始总数（包括被跳过的）
+		
+		albumId, albumName, err := processURL(urlToProcess, nil, nil, actualTaskNum, originalTotalTasks)
+
+		// 记录到历史
+		if task != nil && albumId != "" {
+			status := "success"
+			errorMsg := ""
+			if err != nil {
+				status = "failed"
+				errorMsg = err.Error()
+			}
+
+			history.AddRecord(history.DownloadRecord{
+				URL:        urlToProcess,
+				AlbumID:    albumId,
+				AlbumName:  albumName,
+				Status:     status,
+				DownloadAt: time.Now(),
+				ErrorMsg:   errorMsg,
+
+				// 音质参数
+				QualityHash: history.GetQualityHash(
+					core.Config.GetM3u8Mode,
+					core.Config.AacType,
+					core.Config.AlacMax,
+					core.Config.AtmosMax,
+				),
+				GetM3u8Mode: core.Config.GetM3u8Mode,
+				AacType:     core.Config.AacType,
+				AlacMax:     core.Config.AlacMax,
+				AtmosMax:    core.Config.AtmosMax,
+			})
+		}
+
+		// 任务之间添加视觉间隔（最后一个任务不需要）
+		if isBatch && i < len(finalUrls)-1 {
+			core.SafePrintf("\n%s\n\n", strings.Repeat("=", 80))
+		}
+		
+		// 工作-休息循环检查（在任务完成后）
+		if isBatch && core.Config.WorkRestEnabled && i < len(finalUrls)-1 {
+			elapsed := time.Since(workStartTime)
+			workDuration := time.Duration(core.Config.WorkDurationMinutes) * time.Minute
+			
+			if elapsed >= workDuration {
+				// 工作时间已到，需要休息
+				restDuration := time.Duration(core.Config.RestDurationMinutes) * time.Minute
+				
+				cyan := color.New(color.FgCyan, color.Bold)
+				yellow := color.New(color.FgYellow)
+				green := color.New(color.FgGreen)
+				
+				core.SafePrintf("\n")
+				core.SafePrintf(strings.Repeat("=", 80) + "\n")
+				cyan.Printf("⏸️  工作时长已达 %d 分钟，进入休息时间\n", core.Config.WorkDurationMinutes)
+				yellow.Printf("😴 休息 %d 分钟...\n", core.Config.RestDurationMinutes)
+				core.SafePrintf("📊 已完成: %d/%d 个任务\n", i+1, totalTasks)
+				core.SafePrintf("⏰ 当前时间: %s\n", time.Now().Format("15:04:05"))
+				core.SafePrintf("⏱️  预计恢复时间: %s\n", time.Now().Add(restDuration).Format("15:04:05"))
+				core.SafePrintf(strings.Repeat("=", 80) + "\n\n")
+				
+				// 休息倒计时（每30秒提示一次）
+				restTicker := time.NewTicker(30 * time.Second)
+				restTimer := time.NewTimer(restDuration)
+				restStartTime := time.Now()
+				
+				restDone := false
+				for !restDone {
+					select {
+					case <-restTimer.C:
+						// 休息时间结束
+						restDone = true
+					case <-restTicker.C:
+						// 显示剩余时间
+						remainingTime := restDuration - time.Since(restStartTime)
+						if remainingTime > 0 {
+							core.SafePrintf("⏳ 休息中... 剩余时间: %.0f 分钟 %.0f 秒\n", 
+								remainingTime.Minutes(), 
+								remainingTime.Seconds()-remainingTime.Minutes()*60)
+						}
+					}
+				}
+				restTicker.Stop()
+				
+				// 休息结束，重新开始计时
+				workStartTime = time.Now()
+				core.SafePrintf("\n")
+				core.SafePrintf(strings.Repeat("=", 80) + "\n")
+				green.Printf("✅ 休息完毕，继续下载任务！\n")
+				core.SafePrintf("⏱️  新一轮工作开始时间: %s\n", workStartTime.Format("15:04:05"))
+				core.SafePrintf(strings.Repeat("=", 80) + "\n\n")
+			}
+		}
+	}
+
+	// 保存历史记录
+	if task != nil {
+		if err := history.SaveTask(); err != nil {
+			core.SafePrintf("⚠️  保存历史记录失败: %v\n", err)
+		} else {
+			core.SafePrintf("\n📜 历史记录已保存至: history/%s.json\n", task.TaskID)
+		}
+	}
 }
 
 func main() {
+	// 打印版本信息
+	cyan := color.New(color.FgCyan, color.Bold)
+	yellow := color.New(color.FgYellow)
+	fmt.Println(strings.Repeat("=", 80))
+	cyan.Printf("🎵 Apple Music Downloader %s\n", Version)
+	yellow.Printf("📅 编译时间: %s\n", BuildTime)
+	if GitCommit != "unknown" {
+		yellow.Printf("🔖 Git提交: %s\n", GitCommit)
+	}
+	fmt.Println(strings.Repeat("=", 80))
+	fmt.Println()
+
 	core.InitFlags()
 
 	pflag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "用法: %s [选项] [url1 url2 ...]\n", os.Args[0])
-		fmt.Println("如果没有提供URL，程序将进入交互模式。")
+		fmt.Fprintf(os.Stderr, "用法: %s [选项] [url1 url2 ... | file.txt ...]\n", os.Args[0])
+		fmt.Println("如果没有提供URL或文件，程序将进入交互模式。")
+		fmt.Println()
+		fmt.Println("支持的启动方式:")
+		fmt.Println("  1. 交互模式: 运行程序后输入链接或TXT文件路径")
+		fmt.Println("  2. 单链接模式: ./程序名 <url>")
+		fmt.Println("  3. 多链接模式: ./程序名 <url1> <url2> ...")
+		fmt.Println("  4. TXT文件模式: ./程序名 <file.txt>")
+		fmt.Println("  5. 混合模式: ./程序名 <url1> <file.txt> <url2> ...")
+		fmt.Println()
+		fmt.Println("TXT文件格式:")
+		fmt.Println("  - 支持单行单链接（传统格式）")
+		fmt.Println("  - 支持单行多链接（空格分隔）")
+		fmt.Println("  - 支持注释行（以#开头）")
+		fmt.Println("  - 空行会被自动跳过")
+		fmt.Println()
 		fmt.Println("选项:")
 		pflag.PrintDefaults()
 	}
@@ -316,29 +626,63 @@ func main() {
 
 		if strings.HasSuffix(strings.ToLower(input), ".txt") {
 			if _, err := os.Stat(input); err == nil {
-				fileBytes, err := os.ReadFile(input)
+				urls, err := parseTxtFile(input)
 				if err != nil {
 					fmt.Printf("读取文件 %s 失败: %v\n", input, err)
 					return
 				}
-				lines := strings.Split(string(fileBytes), "\n")
-				var urls []string
-				for _, line := range lines {
-					trimmedLine := strings.TrimSpace(line)
-					if trimmedLine != "" {
-						urls = append(urls, trimmedLine)
-					}
-				}
-				runDownloads(urls, true)
+				fmt.Printf("📊 从文件 %s 中解析到 %d 个链接\n\n", input, len(urls))
+				runDownloads(urls, true, input)
 			} else {
 				fmt.Printf("错误: 文件不存在 %s\n", input)
 				return
 			}
 		} else {
-			runDownloads([]string{input}, false)
+			runDownloads([]string{input}, false, "")
 		}
 	} else {
-		runDownloads(args, false)
+		// 处理命令行参数：支持TXT文件或直接的URL列表
+		var urls []string
+		isBatch := false
+		var taskFile string
+
+		for _, arg := range args {
+			if strings.HasSuffix(strings.ToLower(arg), ".txt") {
+				// 参数是TXT文件
+				if _, err := os.Stat(arg); err == nil {
+					fileUrls, err := parseTxtFile(arg)
+					if err != nil {
+						fmt.Printf("读取文件 %s 失败: %v\n", arg, err)
+						continue
+					}
+					fmt.Printf("📊 从文件 %s 中解析到 %d 个链接\n", arg, len(fileUrls))
+					urls = append(urls, fileUrls...)
+					isBatch = true
+					// 记录第一个txt文件作为任务文件
+					if taskFile == "" {
+						taskFile = arg
+					}
+				} else {
+					fmt.Printf("错误: 文件不存在 %s\n", arg)
+				}
+			} else {
+				// 参数是URL
+				urls = append(urls, arg)
+			}
+		}
+
+		if len(urls) > 1 {
+			isBatch = true
+		}
+
+		if len(urls) > 0 {
+			if isBatch {
+				fmt.Println()
+			}
+			runDownloads(urls, isBatch, taskFile)
+		} else {
+			fmt.Println("没有有效的链接可供处理。")
+		}
 	}
 
 	fmt.Printf("\n📦 已完成: %d/%d | 警告: %d | 错误: %d\n", core.Counter.Success, core.Counter.Total, core.Counter.Unavailable+core.Counter.NotSong, core.Counter.Error)
