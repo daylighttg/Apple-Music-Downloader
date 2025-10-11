@@ -15,7 +15,63 @@ Original script by Sorrow. Enhanced with numerous improvements and optimizations
 
 ---
 
-## 🎉 What's New (v2.1.0 - v2.3.0)
+## 🎉 What's New (v2.6.0)
+
+### 🚀 v2.6.0 - Architecture Refactor & System Optimization (2025-10-11)
+
+#### 🏗️ Architecture Refactor
+- **Unified Logging System** - New `internal/logger` module with 4-level log control (DEBUG/INFO/WARN/ERROR)
+- **Progress Event System** - Observer pattern event architecture, decoupling UI updates from business logic
+- **Smart UI Simplification** - Adaptive terminal width display (FullMode/CompactMode/MinimalMode)
+- **Album Metadata Fix** - Album and AlbumSort fields now include quality tags (e.g., "Head Hunters Hi-Res Lossless")
+
+#### ⚡ Performance Optimization
+- **Reduced UI Refresh Rate** - From 200ms to intelligent refresh, lowering CPU usage
+- **Optimized Logger Performance** - Support for high-concurrency logging scenarios
+- **Improved Progress Event Distribution** - Enhanced multi-task concurrency efficiency
+
+#### 🐛 Critical Fixes
+- **Log Duplication Issue** - Fixed logger output interfering with UI cursor positioning (redirected logger to stderr)
+- **UI Rendering Misalignment** - Fixed line overflow and scrolling issues caused by long track names
+- **Metadata Quality Tags** - Fixed music management software unable to distinguish different quality versions of the same album
+
+### 🎯 v2.5.0 - Metadata & Naming Convention Improvements (2025-10-10)
+
+> [!IMPORTANT]
+> **⭐ Core Feature: Album Folder Naming & Metadata Quality Tags**
+> 
+> This is a critical feature designed to solve the problem of music management software (like Plex/Emby/Jellyfin) being unable to distinguish different quality versions of the same album.
+> 
+> **Features:**
+> - ✅ **Album Folder Tags** - Quality tags added to folder names (e.g., `Head Hunters Alac/`)
+> - ✅ **Metadata Quality Tags** - ALBUM and ALBUMSORT fields include quality tags (e.g., `ALBUM = "Head Hunters Alac"`)
+> - ✅ **Perfect Sync** - Folder names and metadata stay consistent
+> - ✅ **Configurable** - Flexibly control via configuration file
+> 
+> **Use Cases:**
+> - 📚 Collecting multiple quality versions of the same album (Alac, Hi-Res, Atmos, AAC)
+> - 🎵 Using Plex/Emby/Jellyfin music servers
+> - 💿 Need precise album version management
+> 
+> **Configuration:**
+> ```yaml
+> # config.yaml
+> add-quality-tag-to-folder: true      # Folder names include quality tags
+> add-quality-tag-to-metadata: true    # Metadata includes quality tags
+> ```
+
+#### Album Metadata Quality Tags
+- **Album and AlbumSort Fields** - Add quality tags to ALBUM and ALBUMSORT fields in metadata
+- **Fix Recognition Issues** - Ensure music management software correctly identifies different quality versions
+- **All Quality Support** - Alac / Hi-Res Lossless / Dolby Atmos / Aac 256
+- **Compatibility** - Perfect support for iTunes / Plex / Emby / Jellyfin
+
+**Example Effect:**
+```
+Album Folder: Head Hunters Hi-Res Lossless/
+Track Metadata: ALBUM = "Head Hunters Hi-Res Lossless"
+               ALBUMSORT = "Head Hunters Hi-Res Lossless"
+```
 
 ### 📊 Recent Major Updates
 
@@ -23,26 +79,22 @@ Original script by Sorrow. Enhanced with numerous improvements and optimizations
 - **🎬 MV Quality Display** - Automatic detection and display of video quality (4K/1080P/720P/480P)
 - **📈 True Progress Tracking** - Fixed MV download progress to show actual total size instead of segment size
 - **🎨 UI Optimization** - Streamlined progress bars with clear video/audio stream labels
-- **Technical**: Concurrent HEAD requests for size calculation, custom progress descriptions
 
 #### v2.2.0 - UI & Logging Governance (2025-10-09)
 - **🌏 Chinese Help Menu** - Complete localization of `--help` parameter descriptions
 - **✨ Emoji Enhancement** - Beautiful terminal output with contextual emoji icons
 - **🔧 Thread-Safe Logging** - OutputMutex + SafePrintf for clean concurrent logs
-- **📝 Documentation Overhaul** - Consolidated and organized all project documentation
 
 #### v2.1.0 - Performance & UX Improvements (2025-10-09)
 - **⚡ Cache Transfer Mechanism** - 50-70% faster downloads for NFS/network storage
 - **🔍 Interactive File Check** - Smart prompts for existing files with skip options
-- **📊 Smart Status Messages** - Distinguished between cache transfer and local verification
 - **🎯 Quality Tag Standardization** - Emby-compatible MV paths and unified quality tags
-- **🐛 Critical Fixes** - FFmpeg path detection, cache skip logic, file checking improvements
 
 ### 📈 Improvements Summary
-- **Code Quality**: +150 lines of optimized code, 2 new utility functions
-- **User Experience**: Emoji-rich output, Chinese localization, clearer progress indicators
-- **Performance**: Concurrent downloads, intelligent caching, reduced network overhead
-- **Documentation**: 8 new guides, comprehensive changelog, unified binary management
+- **Code Quality**: Complete refactor, new unit tests, concurrency safety verification (go test -race)
+- **User Experience**: Emoji-rich output, Chinese localization, smart UI simplification, clearer progress indicators
+- **Performance**: Concurrent downloads, intelligent caching, reduced network overhead, optimized UI refresh
+- **Documentation**: 15 technical documents, comprehensive changelog, detailed configuration guides
 
 ---
 
@@ -97,6 +149,13 @@ Original script by Sorrow. Enhanced with numerous improvements and optimizations
 - Go 1.23.1 or higher
 - 8GB+ RAM recommended
 - 50GB+ free disk space (if using cache mechanism)
+
+> [!NOTE]
+> **💡 Disk Space Recommendations**
+> 
+> - **Without cache**: Only need enough space to store downloaded files
+> - **With cache mechanism**: Additional 50GB+ local temporary space required
+> - **Large-scale batch downloads**: Recommend 100GB+ space for optimal performance
 
 ---
 
@@ -169,6 +228,26 @@ nano config.yaml
 
 ### Cache Mechanism (NFS Optimization)
 
+> [!IMPORTANT]
+> **⚠️ Cache Mechanism Important Notes**
+> 
+> **Recommended Use Cases:**
+> - ✅ Target path is NFS/SMB or other network file systems
+> - ✅ Local machine has 50GB+ available disk space (SSD recommended)
+> - ✅ Frequent batch download tasks
+> 
+> **Key Considerations:**
+> - ⚠️ **Disk Space**: Cache folder needs sufficient temporary storage space, recommend at least 50GB
+> - ⚠️ **Cache Path**: Must use local fast disk (SSD), do not set on NFS or other network paths
+> - ⚠️ **File System**: Cross-filesystem transfers will use copy method, speed will be reduced
+> - ⚠️ **Cleanup Mechanism**: Program automatically cleans up successfully transferred cache, also auto-rollback on failure
+> - ⚠️ **Manual Cleanup**: You can manually delete the `Cache` folder at any time, program will auto-rebuild
+> 
+> **Performance Boost Data (Real Tests):**
+> - Download time improvement: **50-70%**
+> - Network I/O reduction: **90%+**
+> - Better stability: Atomic operations, automatic rollback on failure
+
 Significantly improves performance when downloading to network storage (NFS/SMB):
 
 ```yaml
@@ -177,14 +256,108 @@ enable-cache: true
 cache-folder: "./Cache"  # Local SSD path recommended
 ```
 
-**Performance Boost:**
-- ⚡ **50-70% faster** download times
-- ⚡ **90%+ reduction** in network I/O operations
-- ⚡ **Better stability** - atomic operations with auto-rollback
+**Configuration Recommendations:**
+- ⚡ **Local SSD Cache** - Set `cache-folder` to a local SSD path (e.g., `/ssd/cache/apple-music`)
+- ⚡ **Network Storage Target** - Set `alac-save-folder` and `atmos-save-folder` to NFS/SMB paths
+- ⚡ **Sufficient Space** - Ensure cache path has at least 50GB available space
+
+**How It Works:**
+1. Files are first downloaded to local cache folder
+2. All processing (decryption, merging, metadata) completed locally
+3. After completion, batch transfer to target network path
+4. Automatically clean up cache, free space
 
 [📚 Read Cache Mechanism Documentation](./CACHE_MECHANISM.md)
 
+### History Records & Resume Downloads
+
+> [!TIP]
+> **🔄 Smart Resume Downloads**
+> 
+> Batch download tasks support automatic history records and resume downloads functionality, allowing tasks to continue from breakpoints after interruption.
+
+**Automatic Features:**
+- 📁 Automatically record each batch task in the `history` folder
+- 🔍 Automatically detect and skip completed albums before starting new tasks
+- ⏸️ Support resuming from breakpoints after task interruption, avoiding duplicate downloads
+
+**Usage Example:**
+```bash
+# First run
+./apple-music-downloader ClassicAlbums.txt
+
+# After interruption, run again (automatically skip completed)
+./apple-music-downloader ClassicAlbums.txt
+# Output: 📜 History record detected: Found 20 completed tasks
+#         ⏭️  Automatically skipped, 43 tasks remaining
+```
+
+**Advanced Usage:**
+```bash
+# View history records
+ls -lh history/
+
+# Clear history records (re-download all content)
+rm -rf history/
+```
+
+[📚 Read History Records Feature Documentation](./HISTORY_FEATURE.md)
+
+### Logging Configuration (v2.6.0+)
+
+**Unified logging system** with 4-level log control and flexible configuration:
+
+```yaml
+# config.yaml
+logging:
+  level: info                  # debug/info/warn/error
+  output: stdout               # stdout/stderr/file path
+  show_timestamp: false        # Recommend off for UI mode
+```
+
+**Log Level Descriptions:**
+- `debug` - Show all debug information (for development and troubleshooting)
+- `info` - Show general information (default, recommended)
+- `warn` - Only show warnings and errors
+- `error` - Only show error messages
+
+**Output Targets:**
+- `stdout` - Standard output (default)
+- `stderr` - Standard error output (automatically used in UI mode)
+- File path - e.g., `./logs/download.log`
+
+**Usage Recommendations:**
+- Dynamic UI mode: `show_timestamp: false` to avoid timestamp interference with UI
+- Pure log mode (`--no-ui`): `show_timestamp: true` for better traceability
+- CI/CD environment: Use `--no-ui` + log file output
+
 ### Custom Naming Formats
+
+> [!TIP]
+> **🏷️ Quality Tag Configuration (v2.5.0+)**
+> 
+> From v2.5.0, you can flexibly control where quality tags appear:
+> 
+> ```yaml
+> # config.yaml - Quality tag configuration
+> add-quality-tag-to-folder: true      # Folder names include quality tags
+> add-quality-tag-to-metadata: true    # Metadata includes quality tags
+> ```
+> 
+> **Configuration Combination Effects:**
+> 
+> | Folder Tag | Metadata Tag | Folder Name | Metadata ALBUM | Use Case |
+> |:---:|:---:|---|---|---|
+> | ✅ | ✅ | `Head Hunters Alac/` | `Head Hunters Alac` | **Recommended**: Perfect sync, music software recognizes correctly |
+> | ✅ | ❌ | `Head Hunters Alac/` | `Head Hunters` | Clear file classification, clean metadata |
+> | ❌ | ✅ | `Head Hunters/` | `Head Hunters Alac` | Clean folder names, quality info in metadata |
+> | ❌ | ❌ | `Head Hunters/` | `Head Hunters` | Not recommended: Cannot distinguish quality versions |
+> 
+> **Usage Recommendations:**
+> - 🎵 **Plex/Emby/Jellyfin Users**: Enable both (`true`)
+> - 💿 **Collecting Multiple Quality Versions**: Enable both (`true`)
+> - 🗂️ **File Classification Only**: Enable folder tag only
+> - ✨ **Pursuing Simplicity**: Enable metadata tag only
 
 ```yaml
 # Album folder: "Album Name Dolby Atmos"
@@ -412,6 +585,6 @@ This project is for personal use only. All rights to the downloaded content belo
 
 ---
 
-**Version:** v2.3.0  
-**Last Updated:** 2025-10-09  
+**Version:** v2.6.0  
+**Last Updated:** 2025-10-11  
 **Go Version Required:** 1.23.1+

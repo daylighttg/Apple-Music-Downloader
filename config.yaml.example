@@ -100,6 +100,21 @@ playlist-folder-format: "{PlaylistName}"                # 播放列表文件夹�
 song-file-format: "{SongNumer}. {SongName}"             # 歌曲文件命名格式
 artist-folder-format: "{UrlArtistName}"                 # 艺术家文件夹命名格式（留空则不创建）
 
+# ========== 音质标签配置 (v2.5.0+) ==========
+# 控制专辑文件夹命名和曲目元数据中的音质标签
+add-quality-tag-to-folder: true                         # 是否在专辑文件夹名称末尾添加音质标签（如 "Album Alac"）
+add-quality-tag-to-metadata: true                       # 是否在曲目元数据的 ALBUM 和 ALBUMSORT 字段中添加音质标签
+
+# 音质标签说明：
+# - 启用两项配置：文件夹和元数据完全匹配，音乐管理软件能正确识别不同音质版本
+# - 仅启用文件夹标签：文件按音质分类存储，但元数据中不体现音质
+# - 仅启用元数据标签：文件夹名称简洁，音质信息仅在元数据中体现
+# - 两项都禁用：文件夹和元数据都不包含音质标签（不推荐，可能导致版本混淆）
+# 
+# 建议配置：
+# - 使用 Plex/Emby/Jellyfin：建议都启用（true）
+# - 仅个人收藏：根据个人喜好配置
+
 # ========== 特殊标签 ==========
 explicit-choice: "[E]"                                  # 显式内容标识
 clean-choice: "[C]"                                     # 净化版本标识
