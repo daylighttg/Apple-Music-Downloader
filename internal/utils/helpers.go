@@ -165,6 +165,39 @@ func FormatQualityTag(tag string) string {
 	return tag
 }
 
+// StripCodecSuffix 移除名称末尾的编解码/音质标记（例如: " Alac", " AAC", " Aac 256", " FLAC", " MP3"）
+// 仅清理末尾标记，并去除多余空格/分隔符。
+func StripCodecSuffix(name string) string {
+	if name == "" {
+		return name
+	}
+	// 支持的标记（不区分大小写）
+	// 注意：仅移除典型编解码名称，避免误删正常词汇
+	patterns := []string{
+		`(?i)[\s\-\[\(]*alac[\]\)]?$`,
+		`(?i)[\s\-\[\(]*aac(?:\s*256)?[\]\)]?$`,
+		`(?i)[\s\-\[\(]*flac[\]\)]?$`,
+		`(?i)[\s\-\[\(]*mp3[\]\)]?$`,
+	}
+	trimmed := name
+	repeat := true
+	for repeat {
+		repeat = false
+		for _, p := range patterns {
+			re := regexp.MustCompile(p)
+			new := re.ReplaceAllString(trimmed, "")
+			new = strings.TrimSpace(new)
+			// 合并多余空格
+			new = regexp.MustCompile(`\s{2,}`).ReplaceAllString(new, " ")
+			if new != trimmed {
+				trimmed = new
+				repeat = true
+			}
+		}
+	}
+	return trimmed
+}
+
 // SafeMoveFile 安全地移动文件从源路径到目标路径
 // 如果是跨文件系统操作，会使用拷贝+删除的方式
 // 如果目标文件已存在，会跳过移动并返回特殊错误
