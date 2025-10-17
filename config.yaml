@@ -4,10 +4,10 @@
 accounts:
   - name: "CN"                                          # 账号名称，方便识别
     storefront: "cn"                                    # 账号所属区域（必须小写，如 cn, us, jp, hk）
-    media-user-token: "Ahcx9Glaq2AWej2/mF/wSbroLVp7AwK/yLqqlC4X3XZLssoTQ9DStgtyXASuL4T0GyD6oSQHuoZtRZbYAywPEldxXpds9/nsPDDieY7EglPy5y7GNtTEE04QebDoWQhl6ytccpsZNkCU8pd57/hKYuVxMgsdUxUTVjbqIr1bAbxWHqadwW34GENVwWD1f90jfqd+qRQsEi4W80VC9NYtfNcfd7usI+xiXiMEJs13jyyx8j/khw=="
-    authorization-token: "your-cn-auth-token"           # 授权令牌（可选，留空时程序自动获取）
-    decrypt-m3u8-port: "192.168.1.9:10020"              # 解密服务端口
-    get-m3u8-port: "192.168.1.9:10021"                  # M3U8获取服务端口
+    media-user-token: "your-media-user-token"
+    authorization-token: "your-authorization-token"           # 授权令牌（可选，留空时程序自动获取）
+    decrypt-m3u8-port: "127.0.0.1:10020"              # 解密服务端口
+    get-m3u8-port: "127.0.0.1:20020"               # M3U8获取服务端口
 
 # ========== 路径配置 ==========
 alac-save-folder: "/media/Music/AppleMusic/Alac"        # ALAC 无损音频保存路径
