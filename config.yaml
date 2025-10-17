@@ -1,120 +1,214 @@
 # Apple Music 下载器配置文件
+# EN: Apple Music downloader configuration file
 
 # ========== 账号配置 ==========
+# EN: ========== Account configuration ==========
 accounts:
   - name: "CN"                                          # 账号名称，方便识别
+                                                        # EN: Account name, for easy identification
     storefront: "cn"                                    # 账号所属区域（必须小写，如 cn, us, jp, hk）
-    media-user-token: "your-media-user-token"
-    authorization-token: "your-authorization-token"           # 授权令牌（可选，留空时程序自动获取）
-    decrypt-m3u8-port: "127.0.0.1:10020"              # 解密服务端口
-    get-m3u8-port: "127.0.0.1:20020"               # M3U8获取服务端口
+                                                        # EN: Account storefront/region (must be lowercase, e.g., cn, us, jp, hk)
+    media-user-token: "your-media-user-token"           # ...existing code...
+    authorization-token: "your-authorization-token"     # 授权令牌（可选，留空时程序自动获取）
+                                                        # EN: Authorization token (optional, if empty the program will obtain it automatically)
+    decrypt-m3u8-port: "127.0.0.1:10020"                # 解密服务端口
+                                                        # EN: Decrypt service port
+    get-m3u8-port: "127.0.0.1:20020"                    # M3U8获取服务端口
+                                                        # EN: M3U8 retrieval service port
 
 # ========== 路径配置 ==========
+# EN: ========== Path configuration ==========
 alac-save-folder: "/media/Music/AppleMusic/Alac"        # ALAC 无损音频保存路径
+                                                        # EN: Path to save ALAC lossless audio
 atmos-save-folder: "/media/Music/AppleMusic/Atmos"      # Dolby Atmos 音频保存路径
+                                                        # EN: Path to save Dolby Atmos audio
 mv-save-folder: "/media/Music/AppleMusic/MusicVideos"   # MV 视频保存路径
+                                                        # EN: Path to save music videos (MVs)
 
 # ========== 缓存配置 ==========
+# EN: ========== Cache configuration ==========
 enable-cache: true                                      # 是否启用缓存机制（适用于网络文件系统）
+                                                        # EN: Whether to enable caching (useful for network file systems)
 cache-folder: "./Cache"                                 # 缓存文件夹路径（支持相对或绝对路径）
+                                                        # EN: Cache folder path (supports relative or absolute paths)
 
 # ========== 下载性能配置 ==========
+# EN: ========== Download performance configuration ==========
 # M3U8 切片
+# EN: M3U8 segments
 chunk_downloadthreads: 30                               # M3U8 切片并行下载线程数
+                                                        # EN: Number of parallel threads for M3U8 segment downloads
 mv_chunk_downloadthreads: 30                            # MV 视频切片并行下载线程数
+                                                        # EN: Number of parallel threads for MV video segment downloads
 
 # 网络缓冲
+# EN: Network buffering
 NetworkReadBufferKB: 4096                               # 网络读取缓冲区大小（KB）
+                                                        # EN: Network read buffer size (KB)
 BufferSizeKB: 4                                         # I/O 缓冲区大小（KB），过大会导致内存占用过高
+                                                        # EN: I/O buffer size (KB); too large may increase memory usage
 
 # 音频下载线程
+# EN: Audio download threads
 aac_downloadthreads: 5                                  # AAC 格式下载线程数
+                                                        # EN: Number of download threads for AAC format
 lossless_downloadthreads: 5                             # 无损格式下载线程数
+                                                        # EN: Number of download threads for lossless formats
 hires_downloadthreads: 5                                # Hi-Res 高解析度下载线程数
+                                                        # EN: Number of download threads for Hi-Res high-resolution audio
 
 # MV 下载
+# EN: MV (music video) downloads
 mv_downloadthreads: 3                                   # MV 视频文件并行下载线程数
+                                                        # EN: Number of parallel download threads for MV files
 
 # 批量下载
+# EN: Batch downloads
 batch-size: 20                                          # 每批处理的曲目数量（0 表示不分批）
-skip-existing-validation: true                         # 自动跳过已存在文件的校验（true: 自动跳过, false: 询问用户）
+                                                        # EN: Number of tracks per batch (0 means no batching)
+skip-existing-validation: true                          # 自动跳过已存在文件的校验（true: 自动跳过, false: 询问用户）
+                                                        # EN: Automatically skip validation of existing files (true: skip, false: prompt user)
 
 # 工作-休息循环（仅批量模式生效）
-work-rest-enabled: true                                # 是否启用工作-休息循环
+# EN: Work-rest cycle (only effective in batch mode)
+work-rest-enabled: true                                 # 是否启用工作-休息循环
+                                                        # EN: Whether to enable work-rest cycles
 work-duration-minutes: 5                                # 工作时长（分钟），建议 5-30 分钟
+                                                        # EN: Work duration in minutes (recommended 5–30 minutes)
 rest-duration-minutes: 1                                # 休息时长（分钟），建议 1-5 分钟
+                                                        # EN: Rest duration in minutes (recommended 1–5 minutes)
 
 # ========== FFmpeg 配置 ==========
+# EN: ========== FFmpeg configuration ==========
 ffmpeg-fix: true                                        # 是否在下载完成后检测并修复编码问题
+                                                        # EN: Whether to detect and fix encoding issues after download
 ffmpeg-check-args: "-map 0:a:0 -f wav -hide_banner -loglevel error -"      # FFmpeg 检测参数
+                                                        # EN: FFmpeg check arguments
 ffmpeg-encode-args: "-c:v copy -c:a alac -avoid_negative_ts make_zero -f mp4 -y"  # FFmpeg 重编码参数
+                                                        # EN: FFmpeg re-encode arguments
 
 # ========== 语言配置 ==========
+# EN: ========== Language configuration ==========
 language: ""                                            # 语言代码（如 "zh-CN", "en-US"），留空则自动检测
+                                                        # EN: Language code (e.g., "zh-CN", "en-US"); leave empty for auto-detection
 
 # ========== 歌词配置 ==========
+# EN: ========== Lyrics configuration ==========
 default-lyric-storefront: "cn"                          # 默认歌词区域
+                                                        # EN: Default lyrics storefront/region
 lrc-type: "lyrics"                                      # 歌词类型（lyrics: 普通歌词, syllable-lyrics: 逐字歌词）
+                                                        # EN: Lyrics type (lyrics: normal lyrics, syllable-lyrics: syllable-by-syllable)
 lrc-format: "lrc"                                       # 歌词格式（lrc 或 ttml）
+                                                        # EN: Lyrics format (lrc or ttml)
 embed-lrc: true                                         # 是否将歌词嵌入音频文件
+                                                        # EN: Whether to embed lyrics into audio files
 save-lrc-file: false                                    # 是否将歌词另存为 .lrc 文件
+                                                        # EN: Whether to also save lyrics as a separate .lrc file
 
 # ========== 封面配置 ==========
+# EN: ========== Cover/artwork configuration ==========
 embed-cover: true                                       # 是否嵌入封面到音频文件
+                                                        # EN: Whether to embed cover artwork into audio files
 cover-size: "5000x5000"                                 # 封面尺寸
+                                                        # EN: Cover size
 cover-format: "jpg"                                     # 封面格式（jpg, png, original）
+                                                        # EN: Cover format (jpg, png, original)
 save-artist-cover: true                                 # 是否保存歌手头像
+                                                        # EN: Whether to save artist images
 save-animated-artwork: true                             # 是否保存动画插图（需要 ffmpeg）
+                                                        # EN: Whether to save animated artwork (requires ffmpeg)
 emby-animated-artwork: true                             # 是否生成 Emby 动画插图（需要 ffmpeg）
+                                                        # EN: Whether to generate Emby animated artwork (requires ffmpeg)
 
 # ========== 音频格式配置 ==========
+# EN: ========== Audio format configuration ==========
 get-m3u8-from-device: true                              # 是否从设备获取 M3U8
+                                                        # EN: Whether to get M3U8 from device
 get-m3u8-mode: "hires"                                  # M3U8 获取模式（all: 获取所有, hires: 仅探测 Hi-Res）
+                                                        # EN: M3U8 retrieval mode (all: get all, hires: probe only for Hi-Res)
 aac-type: "aac-lc"                                      # AAC 类型（aac-lc, aac, aac-binaural, aac-downmix）
+                                                        # EN: AAC type (aac-lc, aac, aac-binaural, aac-downmix)
 alac-max: 192000                                        # ALAC 最大采样率（192000, 96000, 48000, 44100）
+                                                        # EN: ALAC maximum sample rate (192000, 96000, 48000, 44100)
 atmos-max: 2768                                         # Atmos 最大码率（2768, 2448）
+                                                        # EN: Atmos maximum bitrate (2768, 2448)
 
 # ========== MV 配置 ==========
+# EN: ========== MV configuration ==========
 download-videos: true                                   # 是否下载 MV 视频
+                                                        # EN: Whether to download MVs (music videos)
 mv-audio-type: "atmos"                                  # MV 音轨偏好（atmos, ac3, aac）
+                                                        # EN: Preferred MV audio track (atmos, ac3, aac)
 mv-max: 2160                                            # MV 视频分辨率偏好（如 2160p, 1080p, 720p）
+                                                        # EN: Preferred MV resolution (e.g., 2160p, 1080p, 720p)
 
 # ========== 路径限制 ==========
+# EN: ========== Path length limits ==========
 max-path-length: 255                                    # 绝对路径字符限制（Windows: 255, Linux/macOS: 4096）
+                                                        # EN: Maximum absolute path length (Windows: 255, Linux/macOS: 4096)
 limit-max: 200                                          # 歌手、专辑、曲目名的最大字符数
+                                                        # EN: Maximum characters for artist, album, track names
 
 # ========== 文件命名格式 ==========
+# EN: ========== File naming formats ==========
 album-folder-format: "{AlbumName} {Tag}"                # 专辑文件夹命名格式
+                                                        # EN: Album folder naming format
 playlist-folder-format: "{PlaylistName}"                # 播放列表文件夹命名格式
+                                                        # EN: Playlist folder naming format
 song-file-format: "{SongNumer}. {SongName}"             # 歌曲文件命名格式
+                                                        # EN: Song file naming format
 artist-folder-format: "{UrlArtistName}"                 # 艺术家文件夹命名格式（留空则不创建）
+                                                        # EN: Artist folder naming format (leave empty to not create)
 
 # ========== 音质标签配置 (v2.5.0+) ==========
+# EN: ========== Quality tag configuration (v2.5.0+) ==========
 # 控制专辑文件夹命名和曲目元数据中的音质标签
+# EN: Controls quality tags in album folder names and track metadata
 add-quality-tag-to-folder: true                         # 是否在专辑文件夹名称末尾添加音质标签（如 "Album Alac"）
+                                                        # EN: Whether to append quality tag at end of album folder name (e.g., "Album Alac")
 add-quality-tag-to-metadata: true                       # 是否在曲目元数据的 ALBUM 和 ALBUMSORT 字段中添加音质标签
+                                                        # EN: Whether to add quality tag to ALBUM and ALBUMSORT metadata fields
 
 # 音质标签说明：
+# EN: Quality tag notes:
 # - 启用两项配置：文件夹和元数据完全匹配，音乐管理软件能正确识别不同音质版本
+# EN: - Enable both: folder and metadata match, music managers can correctly recognize different quality versions
 # - 仅启用文件夹标签：文件按音质分类存储，但元数据中不体现音质
+# EN: - Only enable folder tag: files are separated by quality, but metadata won't show quality
 # - 仅启用元数据标签：文件夹名称简洁，音质信息仅在元数据中体现
+# EN: - Only enable metadata tag: folder names remain clean, quality info only in metadata
 # - 两项都禁用：文件夹和元数据都不包含音质标签（不推荐，可能导致版本混淆）
-# 
+# EN: - Disable both: neither folder nor metadata contains quality tags (not recommended; may cause version confusion)
+#
 # 建议配置：
+# EN: Recommendations:
 # - 使用 Plex/Emby/Jellyfin：建议都启用（true）
+# EN: - Using Plex/Emby/Jellyfin: recommend enabling both (true)
 # - 仅个人收藏：根据个人喜好配置
+# EN: - For personal collection only: configure according to personal preference
 
 # ========== 特殊标签 ==========
+# EN: ========== Special tags ==========
 explicit-choice: "[E]"                                  # 显式内容标识
+                                                        # EN: Explicit content tag
 clean-choice: "[C]"                                     # 净化版本标识
+                                                        # EN: Clean version tag
 apple-master-choice: "[M]"                              # Apple Digital Master 标识
+                                                        # EN: Apple Digital Master tag
 
 # ========== 播放列表元数据 ==========
+# EN: ========== Playlist metadata ==========
 use-songinfo-for-playlist: false                        # 是否为播放列表使用歌曲信息
+                                                        # EN: Whether to use song info for playlists
 dl-albumcover-for-playlist: false                       # 是否为播放列表下载专辑封面
+                                                        # EN: Whether to download album cover for playlists
 
 # ========== 日志配置 ==========
+# EN: ========== Logging configuration ==========
 logging:
   level: info                                           # 日志等级: debug/info/warn/error
+                                                        # EN: Logging level: debug/info/warn/error
   output: stdout                                        # 输出目标: stdout/stderr/文件路径
+                                                        # EN: Output target: stdout/stderr/file path
   show_timestamp: false                                 # UI模式下关闭时间戳
+                                                        # EN: Disable timestamps in UI mode
