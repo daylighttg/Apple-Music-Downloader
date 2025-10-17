@@ -23,7 +23,6 @@ Original script by Sorrow. Enhanced with numerous improvements and optimizations
 - **Unified Logging System** - New `internal/logger` module with 4-level log control (DEBUG/INFO/WARN/ERROR)
 - **Progress Event System** - Observer pattern event architecture, decoupling UI updates from business logic
 - **Smart UI Simplification** - Adaptive terminal width display (FullMode/CompactMode/MinimalMode)
-- **Album Metadata Fix** - Album and AlbumSort fields now include quality tags (e.g., "Head Hunters Hi-Res Lossless")
 
 #### ⚡ Performance Optimization
 - **Reduced UI Refresh Rate** - From 200ms to intelligent refresh, lowering CPU usage
@@ -33,18 +32,16 @@ Original script by Sorrow. Enhanced with numerous improvements and optimizations
 #### 🐛 Critical Fixes
 - **Log Duplication Issue** - Fixed logger output interfering with UI cursor positioning (redirected logger to stderr)
 - **UI Rendering Misalignment** - Fixed line overflow and scrolling issues caused by long track names
-- **Metadata Quality Tags** - Fixed music management software unable to distinguish different quality versions of the same album
 
 ### 🎯 v2.5.0 - Metadata & Naming Convention Improvements (2025-10-10)
 
 > [!IMPORTANT]
-> **⭐ Core Feature: Album Folder Naming & Metadata Quality Tags**
+> **⭐ Core Feature: Album Folder Naming & Quality Tags**
 > 
 > This is a critical feature designed to solve the problem of music management software (like Plex/Emby/Jellyfin) being unable to distinguish different quality versions of the same album.
 > 
 > **Features:**
 > - ✅ **Album Folder Tags** - Quality tags added to folder names (e.g., `Head Hunters Alac/`)
-> - ✅ **Metadata Quality Tags** - ALBUM and ALBUMSORT fields include quality tags (e.g., `ALBUM = "Head Hunters Alac"`)
 > - ✅ **Perfect Sync** - Folder names and metadata stay consistent
 > - ✅ **Configurable** - Flexibly control via configuration file
 > 
@@ -57,21 +54,8 @@ Original script by Sorrow. Enhanced with numerous improvements and optimizations
 > ```yaml
 > # config.yaml
 > add-quality-tag-to-folder: true      # Folder names include quality tags
-> add-quality-tag-to-metadata: true    # Metadata includes quality tags
+> add-quality-tag-to-metadata: false   # NOTE: Metadata tagging (ALBUM/ALBUMSORT) is disabled/removed
 > ```
-
-#### Album Metadata Quality Tags
-- **Album and AlbumSort Fields** - Add quality tags to ALBUM and ALBUMSORT fields in metadata
-- **Fix Recognition Issues** - Ensure music management software correctly identifies different quality versions
-- **All Quality Support** - Alac / Hi-Res Lossless / Dolby Atmos / Aac 256
-- **Compatibility** - Perfect support for iTunes / Plex / Emby / Jellyfin
-
-**Example Effect:**
-```
-Album Folder: Head Hunters Hi-Res Lossless/
-Track Metadata: ALBUM = "Head Hunters Hi-Res Lossless"
-               ALBUMSORT = "Head Hunters Hi-Res Lossless"
-```
 
 ### 📊 Recent Major Updates
 
@@ -341,43 +325,24 @@ logging:
 > ```yaml
 > # config.yaml - Quality tag configuration
 > add-quality-tag-to-folder: true      # Folder names include quality tags
-> add-quality-tag-to-metadata: true    # Metadata includes quality tags
+> add-quality-tag-to-metadata: false   # Deprecated/disabled: metadata ALBUM/ALBUMSORT will not include quality tags
 > ```
 > 
-> **Configuration Combination Effects:**
+> **Note:** The project no longer adds quality tags into ALBUM/ALBUMSORT metadata fields. Use folder tags for quality differentiation (recommended for Plex/Emby/Jellyfin).
 > 
-> | Folder Tag | Metadata Tag | Folder Name | Metadata ALBUM | Use Case |
-> |:---:|:---:|---|---|---|
-> | ✅ | ✅ | `Head Hunters Alac/` | `Head Hunters Alac` | **Recommended**: Perfect sync, music software recognizes correctly |
-> | ✅ | ❌ | `Head Hunters Alac/` | `Head Hunters` | Clear file classification, clean metadata |
-> | ❌ | ✅ | `Head Hunters/` | `Head Hunters Alac` | Clean folder names, quality info in metadata |
-> | ❌ | ❌ | `Head Hunters/` | `Head Hunters` | Not recommended: Cannot distinguish quality versions |
+> ```yaml
+> # Album folder: "Album Name Dolby Atmos"
+> album-folder-format: "{AlbumName} {Tag}"
 > 
-> **Usage Recommendations:**
-> - 🎵 **Plex/Emby/Jellyfin Users**: Enable both (`true`)
-> - 💿 **Collecting Multiple Quality Versions**: Enable both (`true`)
-> - 🗂️ **File Classification Only**: Enable folder tag only
-> - ✨ **Pursuing Simplicity**: Enable metadata tag only
-
-```yaml
-# Album folder: "Album Name Dolby Atmos"
-album-folder-format: "{AlbumName} {Tag}"
-
-# Song file: "01. Song Name"
-song-file-format: "{SongNumer}. {SongName}"
-
-# Artist folder: "Artist Name"
-artist-folder-format: "{ArtistName}"
-
-# Playlist folder: "Playlist Name"
-playlist-folder-format: "{PlaylistName}"
-```
-
-**Available Variables:**
-- Album: `{AlbumId}`, `{AlbumName}`, `{ArtistName}`, `{ReleaseDate}`, `{ReleaseYear}`, `{Tag}`, `{Quality}`, `{Codec}`, `{UPC}`, `{Copyright}`, `{RecordLabel}`
-- Song: `{SongId}`, `{SongNumer}`, `{SongName}`, `{DiscNumber}`, `{TrackNumber}`, `{Tag}`, `{Quality}`, `{Codec}`
-- Playlist: `{PlaylistId}`, `{PlaylistName}`, `{ArtistName}`, `{Tag}`, `{Quality}`, `{Codec}`
-- Artist: `{ArtistId}`, `{ArtistName}`, `{UrlArtistName}`
+> # Song file: "01. Song Name"
+> song-file-format: "{SongNumer}. {SongName}"
+> ```
+> 
+> **Available Variables:**
+> - Album: `{AlbumId}`, `{AlbumName}`, `{ArtistName}`, `{ReleaseDate}`, `{ReleaseYear}`, `{Tag}`, `{Quality}`, `{Codec}`, `{UPC}`, `{Copyright}`, `{RecordLabel}`
+> - Song: `{SongId}`, `{SongNumer}`, `{SongName}`, `{DiscNumber}`, `{TrackNumber}`, `{Tag}`, `{Quality}`, `{Codec}`
+> - Playlist: `{PlaylistId}`, `{PlaylistName}`, `{ArtistName}`, `{Tag}`, `{Quality}`, `{Codec}`
+> - Artist: `{ArtistId}`, `{ArtistName}`, `{UrlArtistName}`
 
 ### Multi-Account Configuration
 
