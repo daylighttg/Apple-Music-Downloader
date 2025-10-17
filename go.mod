@@ -13,7 +13,6 @@ require (
 	github.com/spf13/pflag v1.0.5
 	google.golang.org/protobuf v1.36.2
 	lukechampine.com/frand v1.5.1
-
 )
 
 require (
@@ -92,7 +91,6 @@ require (
 	golang.org/x/net v0.45.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/sys v0.37.0 // indirect
-	golang.org/x/term v0.36.0 // indirect
 	golang.org/x/text v0.30.0 // indirect
 	golang.org/x/tools v0.37.0 // indirect
 )
@@ -102,5 +100,6 @@ require (
 	github.com/fatih/color v1.18.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/zhaarey/go-mp4tag v0.0.0-20250210094042-22578afc09bf
+	golang.org/x/term v0.36.0
 	gopkg.in/yaml.v2 v2.2.8
 )
