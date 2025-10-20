@@ -202,6 +202,19 @@ func StripCodecSuffix(name string) string {
 // 如果是跨文件系统操作，会使用拷贝+删除的方式
 // 如果目标文件已存在，会跳过移动并返回特殊错误
 func SafeMoveFile(src, dst string) error {
+	// Check source file permissions and existence
+	srcInfo, err := os.Stat(src)
+	if err != nil {
+		return fmt.Errorf("获取源文件信息失败: %w", err)
+	}
+
+	// Verify source file is readable
+	file, err := os.Open(src)
+	if err != nil {
+		return fmt.Errorf("打开源文件失败: %w", err)
+	}
+	file.Close()
+
 	// 检查目标文件是否已存在
 	targetExists, _ := FileExists(dst)
 	if targetExists {
@@ -251,7 +264,7 @@ func SafeMoveFile(src, dst string) error {
 	srcFile.Close()
 
 	// 拷贝文件权限
-	srcInfo, err := os.Stat(src)
+	srcInfo, err = os.Stat(src)
 	if err == nil {
 		if chmodErr := os.Chmod(dst, srcInfo.Mode()); chmodErr != nil {
 			// 记录警告但不返回错误，因为文件已经成功复制
@@ -269,6 +282,15 @@ func SafeMoveFile(src, dst string) error {
 
 // SafeMoveDirectory 安全地移动整个目录（递归）
 func SafeMoveDirectory(src, dst string) error {
+	// Verify source is a directory
+	srcInfo, err := os.Stat(src)
+	if err != nil {
+		return fmt.Errorf("获取源目录信息失败: %w", err)
+	}
+	if !srcInfo.IsDir() {
+		return fmt.Errorf("源路径不是目录: %s", src)
+	}
+
 	// 首先尝试直接重命名整个目录
 	if err := os.Rename(src, dst); err == nil {
 		return nil
