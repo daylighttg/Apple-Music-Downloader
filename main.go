@@ -25,11 +25,11 @@ import (
 	"github.com/spf13/pflag"
 )
 
-// 版本信息（编译时通过 ldflags 注入）
+// Version contains the application version, injected at build time.
 var (
-	Version   = "dev"     // 版本号
-	BuildTime = "unknown" // 编译时间
-	GitCommit = "unknown" // Git提交哈希
+	Version   = "dev"     // Application version
+	BuildTime = "unknown" // Build timestamp
+	GitCommit = "unknown" // Git commit hash
 )
 
 func handleSingleMV(urlRaw string) {
@@ -39,7 +39,7 @@ func handleSingleMV(urlRaw string) {
 	storefront, albumId := parser.CheckUrlMv(urlRaw)
 	accountForMV, err := core.GetAccountForStorefront(storefront)
 	if err != nil {
-		logger.Error("MV 下载失败: %v", err)
+		logger.Error("MV download failed: %v", err)
 		core.SharedLock.Lock()
 		core.Counter.Error++
 		core.SharedLock.Unlock()
@@ -64,22 +64,22 @@ func handleSingleMV(urlRaw string) {
 
 	mvInfo, err := api.GetMVInfoFromAdam(albumId, accountForMV, storefront)
 	if err != nil {
-		logger.Error("获取 MV 信息失败: %v", err)
+		logger.Error("Failed to fetch MV info: %v", err)
 		core.SharedLock.Lock()
 		core.Counter.Error++
 		core.SharedLock.Unlock()
 		return
 	}
 
-	// 输出MV信息
-	core.SafePrintf("🎤 歌手: %s\n", mvInfo.Data[0].Attributes.ArtistName)
-	core.SafePrintf("🎬 MV: %s\n", mvInfo.Data[0].Attributes.Name)
+	// Output MV information
+	fmt.Printf("🎤 Artist: %s\n", mvInfo.Data[0].Attributes.ArtistName)
+	fmt.Printf("🎬 MV: %s\n", mvInfo.Data[0].Attributes.Name)
 
-	// 提取发行年份
+	// Extract release year
 	var releaseYear string
 	if len(mvInfo.Data[0].Attributes.ReleaseDate) >= 4 {
 		releaseYear = mvInfo.Data[0].Attributes.ReleaseDate[:4]
-		core.SafePrintf("📅 发行年份: %s\n", releaseYear)
+		fmt.Printf("📅 Release Year: %s\n", releaseYear)
 	}
 
 	var artistFolder string
@@ -98,30 +98,30 @@ func handleSingleMV(urlRaw string) {
 		mvSaveFolder = core.Config.AlacSaveFolder
 	}
 
-	// 应用缓存机制
+	// Apply caching mechanism
 	cachePath, finalPath, usingCache := downloader.GetCacheBasePath(mvSaveFolder, albumId)
 
-	mvOutPath, mvResolution, err := downloader.MvDownloader(albumId, cachePath, sanitizedArtistFolder, "", storefront, nil, accountForMV)
+	mvOutPath, mvResolution, err := downloader.MvDownloader(albumId, cachePath, sanitizedArtistFolder, storefront, nil, accountForMV)
 
-	// 分辨率信息已在 MvDownloader 内部显示，这里不再重复显示
+	// Resolution information is displayed internally in MvDownloader
 	_ = mvResolution
 
-	// 如果使用缓存且下载成功，移动文件到最终位置
+	// If using cache and download is successful, move file to final location
 	if err == nil && usingCache && mvOutPath != "" {
-		// 计算最终路径
+		// Calculate final path
 		relPath, _ := filepath.Rel(cachePath, mvOutPath)
 		finalMvPath := filepath.Join(finalPath, relPath)
 
-		// 移动文件
-		core.SafePrintf("\n📤 正在从缓存转移MV文件到目标位置...\n")
+		// Move file
+		fmt.Printf("\n📤 Transferring MV file from cache to target location...\n")
 		if moveErr := downloader.SafeMoveFile(mvOutPath, finalMvPath); moveErr != nil {
-			logger.Error("从缓存移动MV文件失败: %v", moveErr)
+			logger.Error("Failed to move MV file from cache: %v", moveErr)
 			err = moveErr
 		} else {
-			core.SafePrintf("📥 MV文件转移完成！\n")
-			core.SafePrintf("💾 保存路径: %s\n", finalMvPath)
+			fmt.Printf("📥 MV file transfer complete!\n")
+			fmt.Printf("💾 Save path: %s\n", finalMvPath)
 
-			// 清理缓存目录
+			// Clean up cache directory
 			mvCacheDir := filepath.Dir(mvOutPath)
 			for mvCacheDir != cachePath && mvCacheDir != "." && mvCacheDir != "/" {
 				if os.Remove(mvCacheDir) != nil {
@@ -131,12 +131,12 @@ func handleSingleMV(urlRaw string) {
 			}
 		}
 	} else if err == nil && !usingCache && mvOutPath != "" {
-		// 未使用缓存，直接保存
-		core.SafePrintf("\n📥 MV下载完成！\n")
-		core.SafePrintf("💾 保存路径: %s\n", mvOutPath)
+		// Not using cache, save directly
+		fmt.Printf("\n📥 MV download complete!\n")
+		fmt.Printf("💾 Save path: %s\n", mvOutPath)
 	}
 
-	// 如果出错且使用了缓存，清理缓存
+	// If error and using cache, clean up cache
 	if err != nil && usingCache {
 		os.RemoveAll(cachePath)
 	}
@@ -215,7 +215,7 @@ func processURL(urlRaw string, wg *sync.WaitGroup, semaphore chan struct{}, curr
 		return albumId, albumName, err
 	}
 	var urlArg_i = parse.Query().Get("i")
-	err = downloader.Rip(albumId, storefront, urlArg_i, urlRaw, notifier)
+	err = downloader.Rip(albumId, storefront, urlArg_i, notifier)
 	if err != nil {
 		core.SafePrintf("专辑下载失败: %s -> %v\n", urlRaw, err)
 		return albumId, albumName, err
@@ -713,4 +713,3 @@ func main() {
 		logger.Warn("部分任务在执行过程中出错，请检查上面的日志记录。")
 	}
 }
-

@@ -63,4 +63,3 @@ func CheckUrlArtist(url string) (string, string) {
 		return matches[0][1], matches[0][2]
 	}
 }
-

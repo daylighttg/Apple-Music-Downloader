@@ -72,6 +72,11 @@ func getPSSH(contentId string, kidBase64 string) (string, error) {
 	return pssh, nil
 }
 func BeforeRequest(cl *requests.Client, preCtx context.Context, method string, href string, options ...requests.RequestOption) (resp *requests.Response, err error) {
+	// Check if options slice is empty
+	if len(options) == 0 {
+		return nil, fmt.Errorf("options parameter is required")
+	}
+
 	data := options[0].Data
 
 	// 安全地从 context 中获取值
@@ -85,8 +90,14 @@ func BeforeRequest(cl *requests.Client, preCtx context.Context, method string, h
 		return nil, fmt.Errorf("adamId not found in context or invalid type")
 	}
 
+	// Safe type assertion with nil check
+	dataBytes, ok := data.([]byte)
+	if !ok || dataBytes == nil {
+		return nil, fmt.Errorf("data is not []byte or is nil")
+	}
+
 	jsondata := map[string]interface{}{
-		"challenge":      base64.StdEncoding.EncodeToString(data.([]byte)),
+		"challenge":      base64.StdEncoding.EncodeToString(dataBytes),
 		"key-system":     "com.widevine.alpha",
 		"uri":            "data:;base64," + pssh,
 		"adamId":         adamId,
@@ -238,10 +249,11 @@ func extractKidBase64(b string, mvmode bool) (string, string, error) {
 	}
 	return kidbase64, urlBuilder.String(), nil
 }
-func extsong(b string) bytes.Buffer {
+func extsong(b string) (*bytes.Buffer, error) {
 	resp, err := http.Get(b)
 	if err != nil {
-		// 静默处理错误，不干扰UI
+		logger.Error("Error downloading: %v", err)
+		return nil, err
 	}
 	defer resp.Body.Close()
 	var buffer bytes.Buffer
@@ -266,9 +278,13 @@ func extsong(b string) bytes.Buffer {
 			BarEnd:        "",
 		}),
 	)
-	// 忽略 io.Copy 错误，因为这是下载进度显示，主要内容已经缓冲
-	_, _ = io.Copy(io.MultiWriter(&buffer, bar), resp.Body)
-	return buffer
+	// 复制响应体到缓冲区
+	_, err = io.Copy(io.MultiWriter(&buffer, bar), resp.Body)
+	if err != nil {
+		logger.Error("Error reading response: %v", err)
+		return nil, err
+	}
+	return &buffer, nil
 }
 func Run(adamId string, trackpath string, authtoken string, mutoken string, mvmode bool) (string, error) {
 	var keystr string //for mv key
@@ -326,17 +342,19 @@ func Run(adamId string, trackpath string, authtoken string, mutoken string, mvmo
 		keyAndUrls := "1:" + keystr + ";" + fileurl
 		return keyAndUrls, nil
 	}
-	body := extsong(fileurl)
-	// 静默下载，不打印以避免干扰UI系统
-	//bodyReader := bytes.NewReader(body)
-	var buffer bytes.Buffer
-
-	err = DecryptMP4(&body, keybt, &buffer)
+	body, err := extsong(fileurl)
 	if err != nil {
-		// 静默处理解密错误，不干扰UI
+		logger.Error("Failed to download song: %v", err)
 		return "", err
 	}
-	// 解密成功，静默继续
+	// 静默下载，不打印以避免干扰UI系统
+	var buffer bytes.Buffer
+
+	err = DecryptMP4(body, keybt, &buffer)
+	if err != nil {
+		logger.Error("Decryption failed: %v", err)
+		return "", err
+	}
 	// create output file
 	ofh, err := os.Create(trackpath)
 	if err != nil {
@@ -362,6 +380,9 @@ type Segment struct {
 func downloadSegment(url string, index int, wg *sync.WaitGroup, segmentsChan chan<- Segment, client *http.Client, limiter chan struct{}) {
 	// 函数退出时，从 limiter 中接收一个值，释放一个并发槽位
 	defer func() {
+		if r := recover(); r != nil {
+			logger.Error("Panic in downloadSegment(segment %d): %v", index, r)
+		}
 		<-limiter
 		wg.Done()
 	}()
@@ -543,6 +564,13 @@ func ExtMvDataWithDesc(keyAndUrls string, savePath string, description string) e
 			progressbar.OptionThrottle(100*time.Millisecond),
 		)
 	}
+
+	// Ensure bar is not nil before use
+	if bar == nil {
+		logger.Error("Progress bar initialization failed")
+		return fmt.Errorf("progress bar initialization failed")
+	}
+
 	barWriter := io.MultiWriter(tempFile, bar)
 
 	// 启动写入 Goroutine
@@ -564,20 +592,14 @@ func ExtMvDataWithDesc(keyAndUrls string, savePath string, description string) e
 
 	writerWg.Wait()
 
-	if err := tempFile.Close(); err != nil {
-
-		return err
-	}
-
 	cmd1 := exec.Command("mp4decrypt", "--key", key, tempFile.Name(), filepath.Base(savePath))
 	cmd1.Dir = filepath.Dir(savePath)
 	outlog, err := cmd1.CombinedOutput()
 	if err != nil {
-
+		logger.Error("Decrypt failed: %v, output: %s", err, string(outlog))
 		return fmt.Errorf("decrypt failed: %w, output: %s", err, string(outlog))
-	} else {
-
 	}
+	logger.Info("Decryption completed successfully for %s", savePath)
 	return nil
 }
 
@@ -604,14 +626,15 @@ func DecryptMP4(r io.Reader, key []byte, w io.Writer) error {
 	}
 	// Decode segments
 	for _, seg := range inMp4.Segments {
-		if err = mp4.DecryptSegment(seg, decryptInfo, key); err != nil {
-			if err.Error() == "no senc box in traf" {
+		decryptErr := mp4.DecryptSegment(seg, decryptInfo, key)
+		if decryptErr != nil {
+			if decryptErr.Error() == "no senc box in traf" {
 				// No SENC box, skip decryption for this segment as samples can have
 				// unencrypted segments followed by encrypted segments. See:
 				// https://github.com/iyear/gowidevine/pull/26#issuecomment-2385960551
-				err = nil
+				// Continue without error
 			} else {
-				return fmt.Errorf("failed to decrypt segment: %w", err)
+				return fmt.Errorf("failed to decrypt segment: %w", decryptErr)
 			}
 		}
 		if err = seg.Encode(w); err != nil {

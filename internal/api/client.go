@@ -34,6 +34,9 @@ func GetUrlSong(songUrl string, account *structs.Account) (string, error) {
 		core.SharedLock.Unlock()
 		return "", err
 	}
+	if manifest == nil {
+		return "", errors.New("manifest is nil")
+	}
 	if len(manifest.Relationships.Albums.Data) == 0 {
 		return "", errors.New("song does not appear to be part of an album")
 	}

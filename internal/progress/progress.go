@@ -48,7 +48,7 @@ func (n *ProgressNotifier) AddListener(l ProgressListener) {
 func (n *ProgressNotifier) RemoveListener(l ProgressListener) {
 	n.mu.Lock()
 	defer n.mu.Unlock()
-	
+
 	for i, listener := range n.listeners {
 		if listener == l {
 			n.listeners = append(n.listeners[:i], n.listeners[i+1:]...)
@@ -62,7 +62,7 @@ func (n *ProgressNotifier) RemoveListener(l ProgressListener) {
 func (n *ProgressNotifier) Notify(event ProgressEvent) {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
-	
+
 	for _, listener := range n.listeners {
 		listener.OnProgress(event)
 	}
@@ -72,7 +72,7 @@ func (n *ProgressNotifier) Notify(event ProgressEvent) {
 func (n *ProgressNotifier) NotifyComplete(trackIndex int) {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
-	
+
 	for _, listener := range n.listeners {
 		listener.OnComplete(trackIndex)
 	}
@@ -82,7 +82,7 @@ func (n *ProgressNotifier) NotifyComplete(trackIndex int) {
 func (n *ProgressNotifier) NotifyError(trackIndex int, err error) {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
-	
+
 	for _, listener := range n.listeners {
 		listener.OnError(trackIndex, err)
 	}
@@ -94,4 +94,3 @@ func (n *ProgressNotifier) ListenerCount() int {
 	defer n.mu.RUnlock()
 	return len(n.listeners)
 }
-
