@@ -15,7 +15,6 @@ import (
 	"main/internal/api"
 	"main/internal/core"
 	"main/internal/downloader"
-	"main/internal/history"
 	"main/internal/logger"
 	"main/internal/parser"
 	"main/internal/progress"
@@ -320,91 +319,6 @@ func runDownloads(initialUrls []string, isBatch bool, taskFile string, notifier 
 		}
 	}
 
-	// 初始化历史记录系统
-	var task *history.TaskHistory
-	if isBatch && taskFile != "" {
-		// 初始化历史记录目录
-		if err := history.InitHistory(); err != nil {
-			core.SafePrintf("⚠️  初始化历史记录失败: %v\n", err)
-		}
-
-		// 检查历史记录，获取已完成的记录（包含音质信息）
-		var err error
-		completedRecords, err := history.GetCompletedRecords(taskFile)
-		if err != nil {
-			core.SafePrintf("⚠️  读取历史记录失败: %v\n", err)
-			completedRecords = make(map[string]*history.DownloadRecord)
-		}
-
-		// 获取当前音质哈希
-		currentQualityHash := history.GetQualityHash(
-			core.Config.GetM3u8Mode,
-			core.Config.AacType,
-			core.Config.AlacMax,
-			core.Config.AtmosMax,
-		)
-
-		// 过滤已完成的URL（支持音质参数对比）
-		skippedCount := 0
-		qualityChangedCount := 0
-		var remainingUrls []string
-
-		for _, url := range finalUrls {
-			if oldRecord, exists := completedRecords[url]; exists {
-				// URL在历史记录中存在
-
-				if oldRecord.QualityHash == "" {
-					// 旧版本历史记录（无音质哈希），默认跳过
-					skippedCount++
-				} else if oldRecord.QualityHash == currentQualityHash {
-					// 音质参数相同，跳过
-					skippedCount++
-				} else {
-					// 音质参数不同，标记为需要重新下载
-					qualityChangedCount++
-					remainingUrls = append(remainingUrls, url)
-				}
-			} else {
-				// 新链接
-				remainingUrls = append(remainingUrls, url)
-			}
-		}
-
-		if skippedCount > 0 || qualityChangedCount > 0 {
-			core.SafePrintf("📜 历史记录检测: 发现 %d 个已完成的任务\n", skippedCount+qualityChangedCount)
-			if qualityChangedCount > 0 {
-				core.SafePrintf("🔄 音质变化检测: 发现 %d 个任务音质已变化，将重新下载\n", qualityChangedCount)
-				core.SafePrintf("   旧音质配置 → 新音质配置:\n")
-
-				// 显示第一个音质变化的详细信息作为示例
-				for _, url := range finalUrls {
-					if oldRecord, exists := completedRecords[url]; exists && oldRecord.QualityHash != "" && oldRecord.QualityHash != currentQualityHash {
-						core.SafePrintf("   - alac-max: %d → %d\n", oldRecord.AlacMax, core.Config.AlacMax)
-						core.SafePrintf("   - atmos-max: %d → %d\n", oldRecord.AtmosMax, core.Config.AtmosMax)
-						core.SafePrintf("   - get-m3u8-mode: %s → %s\n", oldRecord.GetM3u8Mode, core.Config.GetM3u8Mode)
-						core.SafePrintf("   - aac-type: %s → %s\n", oldRecord.AacType, core.Config.AacType)
-						break
-					}
-				}
-			}
-			core.SafePrintf("⏭️  已自动跳过 %d 个，剩余 %d 个任务\n\n", skippedCount, len(remainingUrls))
-
-			finalUrls = remainingUrls
-			totalTasks = len(finalUrls)
-
-			if totalTasks == 0 {
-				core.SafePrintf("✅ 所有任务都已完成，无需重复下载！\n")
-				return
-			}
-		}
-
-		// 创建新任务
-		task, err = history.NewTask(taskFile, totalTasks)
-		if err != nil {
-			core.SafePrintf("⚠️  创建任务记录失败: %v\n", err)
-		}
-	}
-
 	// 保存原始总数用于显示
 	originalTotalTasks := len(initialUrls)
 
@@ -420,9 +334,6 @@ func runDownloads(initialUrls []string, isBatch bool, taskFile string, notifier 
 		}
 		core.SafePrintf("⚡ 执行模式: 串行模式 \n")
 		core.SafePrintf("📦 专辑内并发: 由配置文件控制\n")
-		if task != nil {
-			core.SafePrintf("📜 历史记录: 已启用\n")
-		}
 		core.SafePrintf("====================================\n\n")
 	} else {
 		core.SafePrintf("📋 开始下载任务\n📝 总数: %d\n--------------------\n", originalTotalTasks)
@@ -446,38 +357,7 @@ func runDownloads(initialUrls []string, isBatch bool, taskFile string, notifier 
 		actualTaskNum := i + 1 + startIndex    // 实际编号 = 当前索引 + 1 + 跳过的数量
 		originalTotalTasks := len(initialUrls) // 原始总数（包括被跳过的）
 
-		albumId, albumName, err := processURL(urlToProcess, nil, nil, actualTaskNum, originalTotalTasks, notifier)
-
-		// 记录到历史
-		if task != nil && albumId != "" {
-			status := "success"
-			errorMsg := ""
-			if err != nil {
-				status = "failed"
-				errorMsg = err.Error()
-			}
-
-			history.AddRecord(history.DownloadRecord{
-				URL:        urlToProcess,
-				AlbumID:    albumId,
-				AlbumName:  albumName,
-				Status:     status,
-				DownloadAt: time.Now(),
-				ErrorMsg:   errorMsg,
-
-				// 音质参数
-				QualityHash: history.GetQualityHash(
-					core.Config.GetM3u8Mode,
-					core.Config.AacType,
-					core.Config.AlacMax,
-					core.Config.AtmosMax,
-				),
-				GetM3u8Mode: core.Config.GetM3u8Mode,
-				AacType:     core.Config.AacType,
-				AlacMax:     core.Config.AlacMax,
-				AtmosMax:    core.Config.AtmosMax,
-			})
-		}
+		_, _, _ = processURL(urlToProcess, nil, nil, actualTaskNum, originalTotalTasks, notifier)
 
 		// 任务之间添加视觉间隔（最后一个任务不需要）
 		if isBatch && i < len(finalUrls)-1 {
@@ -537,15 +417,6 @@ func runDownloads(initialUrls []string, isBatch bool, taskFile string, notifier 
 				core.SafePrintf("⏱️  新一轮工作开始时间: %s\n", workStartTime.Format("15:04:05"))
 				core.SafePrintf(strings.Repeat("=", 80) + "\n\n")
 			}
-		}
-	}
-
-	// 保存历史记录
-	if task != nil {
-		if err := history.SaveTask(); err != nil {
-			core.SafePrintf("⚠️  保存历史记录失败: %v\n", err)
-		} else {
-			core.SafePrintf("\n📜 历史记录已保存至: history/%s.json\n", task.TaskID)
 		}
 	}
 }
