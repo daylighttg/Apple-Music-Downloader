@@ -354,8 +354,7 @@ func runDownloads(initialUrls []string, isBatch bool, taskFile string, notifier 
 
 	for i, urlToProcess := range finalUrls {
 		// 计算实际的任务编号（考虑 --start 参数）
-		actualTaskNum := i + 1 + startIndex    // 实际编号 = 当前索引 + 1 + 跳过的数量
-		originalTotalTasks := len(initialUrls) // 原始总数（包括被跳过的）
+		actualTaskNum := i + 1 + startIndex // 实际编号 = 当前索引 + 1 + 跳过的数量
 
 		_, _, _ = processURL(urlToProcess, nil, nil, actualTaskNum, originalTotalTasks, notifier)
 
