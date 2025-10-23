@@ -557,6 +557,7 @@ func main() {
 					}
 				} else {
 					logger.Error("错误: 文件不存在 %s", arg)
+					continue
 				}
 			} else {
 				// 参数是URL

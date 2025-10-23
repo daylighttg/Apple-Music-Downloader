@@ -7,6 +7,7 @@ toolchain go1.24.8
 require (
 	github.com/Eyevinn/mp4ff v0.50.0
 	github.com/aead/cmac v0.0.0-20160719120800-7af84192f0b1
+	github.com/fatih/color v1.18.0
 	github.com/grafov/m3u8 v0.11.1
 	github.com/schollz/progressbar/v3 v3.14.6
 	github.com/sky8282/requests v0.0.0
@@ -97,7 +98,6 @@ require (
 
 require (
 	github.com/beevik/etree v1.3.0
-	github.com/fatih/color v1.18.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/zhaarey/go-mp4tag v0.0.0-20250210094042-22578afc09bf
 	golang.org/x/term v0.36.0
