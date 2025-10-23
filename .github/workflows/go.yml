@@ -20,10 +20,11 @@ jobs:
       run: |
         go build -o main.exe -v ./main.go
     - name: Create a new directory and copy files
+      shell: bash
       run: |
         mkdir -p alac
         cp config.yaml.example alac/
-        cp dev.env.example alac/
+        if [ -f dev.env.example ]; then cp dev.env.example alac/; fi
         cp README.md alac/
         cp README-CN.md alac/
         cp main.exe alac/
@@ -48,7 +49,7 @@ jobs:
       run: |
         mkdir -p alac
         cp config.yaml.example alac/
-        cp dev.env.example alac/
+        if [ -f dev.env.example ]; then cp dev.env.example alac/; fi
         cp README.md alac/
         cp README-CN.md alac/
         cp main alac/
@@ -73,7 +74,7 @@ jobs:
       run: |
         mkdir -p alac
         cp config.yaml.example alac/
-        cp dev.env.example alac/
+        if [ -f dev.env.example ]; then cp dev.env.example alac/; fi
         cp README.md alac/
         cp README-CN.md alac/
         cp main alac/
